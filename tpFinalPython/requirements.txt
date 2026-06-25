@@ -1,0 +1,12 @@
+# Dependencias para el análisis y modelado (Notebook: main.ipynb)
+pandas==3.0.3
+numpy==2.5.0
+scikit-learn==1.9.0
+joblib==1.5.3
+matplotlib==3.11.0
+seaborn==0.13.2
+
+# Dependencias para el servidor de predicción (Servidor: servidor.py)
+fastapi>=0.100.0
+pydantic>=2.0.0
+uvicorn>=0.20.0
