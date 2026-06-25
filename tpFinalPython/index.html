@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cazador de Exoplanetas - Panel Analitico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes orbit-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes pan-bg {
+            0% { transform: scale(1) translate(0, 0); }
+            50% { transform: scale(1.08) translate(-1%, -0.5%); }
+            100% { transform: scale(1) translate(0, 0); }
+        }
+        .animate-orbit {
+            animation: orbit-spin 6s linear infinite;
+        }
+        .animate-bg {
+            animation: pan-bg 45s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-[#070b13] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/60 via-[#070b13] to-[#03060a] text-slate-100 min-h-screen p-4 md:p-8 font-sans selection:bg-amber-500/30 selection:text-slate-100">
+    
+    <!-- Animated Space Background -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div class="absolute inset-0 bg-gradient-to-b from-[#070b13]/30 via-[#070b13]/85 to-[#03060a] z-10"></div>
+        <img src="deep_space_bg.jpg" class="w-full h-full object-cover opacity-15 animate-bg" alt="Espacio profundo">
+        <canvas id="space-canvas" class="absolute inset-0 w-full h-full opacity-35 z-15"></canvas>
+        <div class="absolute inset-0 bg-[linear-gradient(to_right,#0c1322_1px,transparent_1px),linear-gradient(to_bottom,#0c1322_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] z-20 pointer-events-none"></div>
+    </div>
+
+    <main class="relative z-10 w-full max-w-4xl mx-auto flex flex-col gap-8">
+        
+        <!-- Institutional Header -->
+        <header class="border-b border-slate-800 pb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <span class="text-[10px] font-mono uppercase tracking-widest text-amber-500/80">
+                    Kepler Database Analysis Tool
+                </span>
+                <h1 class="text-2xl font-bold uppercase tracking-wider text-slate-100 mt-1">
+                    Cazador Automatico de Exoplanetas
+                </h1>
+                <p class="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                    Sistema analitico institucional para la evaluacion y confirmacion de anomalias estelares capturadas en la mision Kepler, mediante clasificadores supervisados de Machine Learning.
+                </p>
+            </div>
+            <div class="flex items-center gap-2.5 self-stretch md:self-auto bg-slate-950/60 border border-slate-800 px-3.5 py-2 rounded">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                <span class="text-xs font-mono uppercase text-slate-400 tracking-wider">
+                    Servidor Activo
+                </span>
+            </div>
+        </header>
+
+        <!-- Action presets & Dynamic Catalog Loader -->
+        <section class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-[#0c1220]/40 border border-slate-800/50 p-4 rounded-lg backdrop-blur-sm">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-[10px] font-mono text-slate-500 uppercase block w-full md:w-auto mb-1 md:mb-0">Presets Rápidos:</span>
+                <button
+                    type="button"
+                    id="btn-preset-confirmed"
+                    class="text-xs font-mono bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 px-2.5 py-1.5 rounded transition-all duration-200"
+                >
+                    Muestra 01: Confirmado
+                </button>
+                <button
+                    type="button"
+                    id="btn-preset-false"
+                    class="text-xs font-mono bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 px-2.5 py-1.5 rounded transition-all duration-200"
+                >
+                    Muestra 02: Falso Positivo
+                </button>
+                <span class="text-slate-700 hidden md:inline">|</span>
+                <button
+                    type="button"
+                    id="btn-random-confirmed"
+                    class="text-xs font-mono bg-emerald-950/20 border border-emerald-900/60 hover:border-emerald-800/80 text-emerald-400 px-2.5 py-1.5 rounded transition-all duration-200"
+                >
+                    🎲 Confirmado Aleatorio
+                </button>
+                <button
+                    type="button"
+                    id="btn-random-false"
+                    class="text-xs font-mono bg-rose-950/20 border border-rose-900/60 hover:border-rose-800/80 text-rose-400 px-2.5 py-1.5 rounded transition-all duration-200"
+                >
+                    🎲 Falso Positivo Aleatorio
+                </button>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <div class="relative flex-1 md:w-48">
+                    <input
+                        type="text"
+                        id="txt-search-kepler"
+                        placeholder="Ej: K00752.01 o Kepler-22 b"
+                        class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500/60 font-mono"
+                    >
+                </div>
+                <button
+                    type="button"
+                    id="btn-search-kepler"
+                    class="bg-amber-500/20 border border-amber-500/50 hover:bg-amber-500/30 text-amber-400 text-xs px-3 py-1.5 rounded font-mono transition-all duration-200"
+                >
+                    Buscar ID
+                </button>
+            </div>
+        </section>
+
+        <!-- Loaded Candidate Info Badge -->
+        <div id="loaded-candidate-badge" class="hidden flex flex-col sm:flex-row sm:items-center justify-between bg-amber-500/5 border border-amber-500/20 px-4 py-2.5 rounded text-xs font-mono text-amber-300/90 gap-2">
+            <div class="flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                <span>Candidato Kepler Cargado: <strong id="lbl-candidate-name" class="text-slate-100">K00752.01</strong></span>
+                <span id="lbl-candidate-public-name" class="text-slate-400"></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-slate-500">Estado Real en Catálogo:</span>
+                <span id="lbl-candidate-disposition" class="px-2 py-0.5 rounded text-[10px] uppercase font-bold"></span>
+            </div>
+        </div>
+
+        <!-- Dashboard Panels -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Form Area -->
+            <form id="formulario-estrella" class="lg:col-span-2 flex flex-col gap-6 bg-[#0c1220]/80 border border-slate-800/80 p-6 rounded-lg shadow-2xl backdrop-blur-sm">
+
+                <!-- Form Section B: Stellar Dispositions Flags -->
+                <div>
+                    <h2 class="text-xs font-mono uppercase tracking-widest text-slate-400 border-b border-slate-800/80 pb-2 mb-4">
+                        Banderas de Descarte Kepler (False Positive Flags)
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        
+                        <!-- Flag NT -->
+                        <div class="flex flex-col gap-1.5 p-3 rounded bg-slate-900/40 border border-slate-800/80 hover:border-slate-700/50 transition-all duration-200">
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                    No-Transitorio (NT)
+                                </label>
+                                <span class="text-[10px] font-mono text-amber-500/80 bg-amber-950/20 px-1.5 py-0.5 rounded border border-amber-900/30">
+                                    binario
+                                </span>
+                            </div>
+                            <select id="koi_fpflag_nt" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-amber-500/50">
+                                <option value="0" selected>0 (Negativo)</option>
+                                <option value="1">1 (Positivo)</option>
+                            </select>
+                            <p class="text-[11px] text-slate-400/80 leading-relaxed mt-1">
+                                Curva de luz sin patron de transito regular.
+                            </p>
+                        </div>
+
+                        <!-- Flag SS -->
+                        <div class="flex flex-col gap-1.5 p-3 rounded bg-slate-900/40 border border-slate-800/80 hover:border-slate-700/50 transition-all duration-200">
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                    Co-Transito Estelar (SS)
+                                </label>
+                                <span class="text-[10px] font-mono text-amber-500/80 bg-amber-950/20 px-1.5 py-0.5 rounded border border-amber-900/30">
+                                    binario
+                                </span>
+                            </div>
+                            <select id="koi_fpflag_ss" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-amber-500/50">
+                                <option value="0" selected>0 (Negativo)</option>
+                                <option value="1">1 (Positivo)</option>
+                            </select>
+                            <p class="text-[11px] text-slate-400/80 leading-relaxed mt-1">
+                                Fenomeno consistente con estrella binaria eclipsante.
+                            </p>
+                        </div>
+
+                        <!-- Flag CO -->
+                        <div class="flex flex-col gap-1.5 p-3 rounded bg-slate-900/40 border border-slate-800/80 hover:border-slate-700/50 transition-all duration-200">
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                    Centroide (CO)
+                                </label>
+                                <span class="text-[10px] font-mono text-amber-500/80 bg-amber-950/20 px-1.5 py-0.5 rounded border border-amber-900/30">
+                                    binario
+                                </span>
+                            </div>
+                            <select id="koi_fpflag_co" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-amber-500/50">
+                                <option value="0" selected>0 (Negativo)</option>
+                                <option value="1">1 (Positivo)</option>
+                            </select>
+                            <p class="text-[11px] text-slate-400/80 leading-relaxed mt-1">
+                                Fuente de luz desplazada del centroide de la estrella.
+                            </p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Form Section C: Physical & Astronomical Properties -->
+                <div>
+                    <h2 class="text-xs font-mono uppercase tracking-widest text-slate-400 border-b border-slate-800/80 pb-2 mb-4">
+                        Propiedades Fisicas y Coordenadas Estelares
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        
+                        <!-- slogg -->
+                        <div class="flex flex-col gap-1.5">
+                            <div class="flex justify-between items-center">
+                                <label for="koi_slogg" class="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                    Gravedad Estelar (log(g))
+                                </label>
+                                <span class="text-[10px] font-mono text-amber-500/80 bg-amber-950/20 px-1.5 py-0.5 rounded border border-amber-900/30">
+                                    log10(cm/s²)
+                                </span>
+                            </div>
+                            <input type="number" id="koi_slogg" step="0.01" value="4.4" class="w-full bg-slate-900/90 border border-slate-700/60 rounded px-3 py-2 text-sm text-slate-100 font-mono focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/20 focus:outline-none transition-colors duration-200">
+                        </div>
+
+                        <!-- srad -->
+                        <div class="flex flex-col gap-1.5">
+                            <div class="flex justify-between items-center">
+                                <label for="koi_srad" class="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                    Radio Estelar (R_sun)
+                                </label>
+                                <span class="text-[10px] font-mono text-amber-500/80 bg-amber-950/20 px-1.5 py-0.5 rounded border border-amber-900/30">
+                                    R☉
+                                </span>
+                            </div>
+                            <input type="number" id="koi_srad" step="0.01" value="1.0" class="w-full bg-slate-900/90 border border-slate-700/60 rounded px-3 py-2 text-sm text-slate-100 font-mono focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/20 focus:outline-none transition-colors duration-200">
+                        </div>
+
+                        <!-- ra -->
+                        <div class="flex flex-col gap-1.5">
+                            <div class="flex justify-between items-center">
+                                <label for="ra" class="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                    Ascension Recta (RA)
+                                </label>
+                                <span class="text-[10px] font-mono text-amber-500/80 bg-amber-950/20 px-1.5 py-0.5 rounded border border-amber-900/30">
+                                    grados
+                                </span>
+                            </div>
+                            <input type="number" id="ra" step="0.01" value="291.9" class="w-full bg-slate-900/90 border border-slate-700/60 rounded px-3 py-2 text-sm text-slate-100 font-mono focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/20 focus:outline-none transition-colors duration-200">
+                        </div>
+
+                        <!-- dec -->
+                        <div class="flex flex-col gap-1.5">
+                            <div class="flex justify-between items-center">
+                                <label for="dec" class="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                    Declinacion (DEC)
+                                </label>
+                                <span class="text-[10px] font-mono text-amber-500/80 bg-amber-950/20 px-1.5 py-0.5 rounded border border-amber-900/30">
+                                    grados
+                                </span>
+                            </div>
+                            <input type="number" id="dec" step="0.01" value="48.1" class="w-full bg-slate-900/90 border border-slate-700/60 rounded px-3 py-2 text-sm text-slate-100 font-mono focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/20 focus:outline-none transition-colors duration-200">
+                        </div>
+
+                        <!-- kepmag -->
+                        <div class="md:col-span-2 flex flex-col gap-1.5">
+                            <div class="flex justify-between items-center">
+                                <label for="koi_kepmag" class="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                    Magnitud de Brillo Kepler (Kepmag)
+                                </label>
+                                <span class="text-[10px] font-mono text-amber-500/80 bg-amber-950/20 px-1.5 py-0.5 rounded border border-amber-900/30">
+                                    mag
+                                </span>
+                            </div>
+                            <input type="number" id="koi_kepmag" step="0.01" value="15.3" class="w-full bg-slate-900/90 border border-slate-700/60 rounded px-3 py-2 text-sm text-slate-100 font-mono focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/20 focus:outline-none transition-colors duration-200">
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Action Trigger -->
+                <div class="pt-4 border-t border-slate-800/80">
+                    <button
+                        type="submit"
+                        id="btn-submit"
+                        class="w-full bg-slate-100 hover:bg-white text-slate-950 font-bold py-3 px-4 rounded text-xs uppercase tracking-widest transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_4px_12px_rgba(255,255,255,0.05)] active:scale-[0.98]"
+                    >
+                        Ejecutar Analisis Estelar
+                    </button>
+                </div>
+
+            </form>
+
+            <!-- Response / Info Sidebar Panel -->
+            <div class="flex flex-col gap-6">
+                
+                <!-- Scientific Guide Sidebar Card -->
+                <div class="bg-[#0b101c]/40 border border-slate-800/60 p-6 rounded-lg backdrop-blur-sm">
+                    <h2 class="text-xs font-mono uppercase tracking-widest text-amber-500/90 mb-3">
+                        Protocolo de Analisis
+                    </h2>
+                    <p class="text-[11px] text-slate-400 leading-relaxed mb-3">
+                        Las firmas de transito capturadas se someten a evaluacion segun las tres banderas principales de descarte. La presencia de cualquiera de ellas (1) senala un fenomeno astrofisico no planetario o interferencia optica instrumental.
+                    </p>
+                    <ul class="text-[10px] text-slate-500 font-mono flex flex-col gap-2.5">
+                        <li>
+                            <strong class="text-slate-400">NT FLAG:</strong> Si es 1, no es un transito regular (por ejemplo, ruido instrumental o variabilidad estelar extrema).
+                        </li>
+                        <li>
+                            <strong class="text-slate-400">SS FLAG:</strong> Si es 1, el evento es producido por eclipses mutuos de sistemas estelares dobles.
+                        </li>
+                        <li>
+                            <strong class="text-slate-400">CO FLAG:</strong> Si es 1, el transito no se origina en la estrella objetivo, sino en un objeto cercano desplazado.
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Dynamic Loader -->
+                <div id="loading-container" class="hidden flex flex-col items-center justify-center py-12 gap-6 transition-all duration-300">
+                    <div class="relative w-24 h-24 flex items-center justify-center">
+                        <div class="absolute w-8 h-8 rounded-full bg-gradient-to-r from-amber-200 via-amber-300 to-amber-100 shadow-[0_0_24px_rgba(251,191,36,0.4)] animate-pulse"></div>
+                        <div class="absolute w-20 h-20 rounded-full border border-slate-800"></div>
+                        <div class="absolute w-full h-full animate-orbit">
+                            <div class="absolute top-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-slate-300 border border-slate-950 shadow-[0_0_8px_rgba(255,255,255,0.6)]"></div>
+                        </div>
+                        <div class="absolute w-24 h-[1px] bg-gradient-to-r from-transparent via-amber-500/20 to-transparent"></div>
+                    </div>
+                    <div class="text-center">
+                        <span class="text-xs uppercase tracking-widest text-amber-500/90 font-mono">Procesando Muestra Estelar</span>
+                        <p class="text-[10px] text-slate-500 mt-1 font-mono uppercase tracking-wider">Ejecutando Modelos de Machine Learning</p>
+                    </div>
+                </div>
+
+                <!-- Error Indicator -->
+                <div id="error-container" class="hidden p-4 rounded border border-rose-950 bg-rose-950/10 text-xs font-mono text-rose-400 leading-normal"></div>
+
+                <!-- Result Card -->
+                <div id="resultado-caja" class="hidden p-6 rounded border transition-all duration-500 ease-in-out">
+                    <div class="flex flex-col gap-4">
+                        <div class="flex justify-between items-start border-b border-slate-800 pb-4">
+                            <div>
+                                <span class="text-[10px] font-mono uppercase tracking-widest text-slate-500">Clasificacion de Objeto de Interes</span>
+                                <h3 id="texto-prediccion" class="text-xl font-bold uppercase tracking-wide mt-1"></h3>
+                            </div>
+                            <div id="indicador-luz" class="w-3.5 h-3.5 rounded-full"></div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono mt-2">
+                            <div class="bg-slate-950/40 p-3 rounded border border-slate-900">
+                                <span class="text-slate-500 block mb-1">Brillo (Kepmag)</span>
+                                <span id="res-kepmag" class="text-sm font-semibold text-slate-200"></span>
+                            </div>
+                            <div class="bg-slate-950/40 p-3 rounded border border-slate-900">
+                                <span class="text-slate-500 block mb-1">Falsos Positivos</span>
+                                <span id="res-anomalias" class="text-sm font-semibold text-slate-200"></span>
+                            </div>
+                            <div class="bg-slate-950/40 p-3 rounded border border-slate-900">
+                                <span class="text-slate-500 block mb-1">Gravedad / Radio</span>
+                                <span id="res-fisicas" class="text-sm font-semibold text-slate-200"></span>
+                            </div>
+                        </div>
+
+                        <div class="text-[11px] text-slate-500 leading-relaxed mt-2 pt-2 border-t border-slate-800/40">
+                            La prediccion se calcula escalando las caracteristicas de la muestra estelar con respecto a la poblacion del telescopio espacial Kepler y procesando los coeficientes del modelo clasificador entrenado.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Institutional Footer Copyright -->
+    <footer class="mt-16 border-t border-slate-900 w-full max-w-4xl mx-auto py-6 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-slate-500 font-mono tracking-wider uppercase">
+        <span>Cazador Automatico de Exoplanetas &bull; Proyecto Kepler ML</span>
+        <span>Uso Institucional Restringido</span>
+    </footer>
+
+    <script>
+        // Preset Definitions
+        const PRESETS = {
+            confirmed: {
+                koi_fpflag_nt: 0,
+                koi_fpflag_ss: 0,
+                koi_fpflag_co: 0,
+                koi_slogg: 4.41,
+                koi_srad: 1.05,
+                ra: 291.95,
+                dec: 48.12,
+                koi_kepmag: 15.34
+            },
+            falsePositive: {
+                koi_fpflag_nt: 1,
+                koi_fpflag_ss: 0,
+                koi_fpflag_co: 1,
+                koi_slogg: 4.22,
+                koi_srad: 1.54,
+                ra: 292.12,
+                dec: 43.85,
+                koi_kepmag: 12.15
+            }
+        };
+
+        const fillForm = (preset) => {
+            document.getElementById('koi_fpflag_nt').value = preset.koi_fpflag_nt;
+            document.getElementById('koi_fpflag_ss').value = preset.koi_fpflag_ss;
+            document.getElementById('koi_fpflag_co').value = preset.koi_fpflag_co;
+            document.getElementById('koi_slogg').value = preset.koi_slogg;
+            document.getElementById('koi_srad').value = preset.koi_srad;
+            document.getElementById('ra').value = preset.ra;
+            document.getElementById('dec').value = preset.dec;
+            document.getElementById('koi_kepmag').value = preset.koi_kepmag;
+            
+            // Clean up result/error cards
+            document.getElementById('resultado-caja').classList.add('hidden');
+            document.getElementById('error-container').classList.add('hidden');
+        };
+
+        const updateCandidateBadge = (candidate) => {
+            const badge = document.getElementById('loaded-candidate-badge');
+            const lblName = document.getElementById('lbl-candidate-name');
+            const lblPublicName = document.getElementById('lbl-candidate-public-name');
+            const lblDisp = document.getElementById('lbl-candidate-disposition');
+            
+            if (!candidate) {
+                badge.classList.add('hidden');
+                return;
+            }
+            
+            badge.classList.remove('hidden');
+            lblName.innerText = candidate.kepoi_name;
+            lblPublicName.innerText = candidate.kepler_name ? `(${candidate.kepler_name})` : '';
+            
+            const isConf = candidate.koi_disposition === 'CONFIRMED';
+            lblDisp.innerText = isConf ? 'Confirmado (Planeta)' : 'Falso Positivo';
+            lblDisp.className = 'px-2 py-0.5 rounded text-[10px] uppercase font-bold ' + 
+                (isConf 
+                    ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/30' 
+                    : 'bg-rose-950/40 text-rose-400 border border-rose-900/30');
+        };
+
+        const fetchAndFillCandidate = async (url) => {
+            const errorContainer = document.getElementById('error-container');
+            const resultBox = document.getElementById('resultado-caja');
+            errorContainer.classList.add('hidden');
+            resultBox.classList.add('hidden');
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    const errJson = await response.json();
+                    throw new Error(errJson.detail || 'Error al obtener candidato.');
+                }
+                const candidate = await response.json();
+                fillForm(candidate.features);
+                updateCandidateBadge(candidate);
+            } catch (error) {
+                errorContainer.classList.remove('hidden');
+                errorContainer.innerText = error.message || 'Error de conexión con el catálogo Kepler.';
+            }
+        };
+
+        // Reset badge when clicking standard static presets
+        const fillFormWithReset = (preset) => {
+            fillForm(preset);
+            updateCandidateBadge(null);
+        };
+
+        document.getElementById('btn-preset-confirmed').addEventListener('click', () => fillFormWithReset(PRESETS.confirmed));
+        document.getElementById('btn-preset-false').addEventListener('click', () => fillFormWithReset(PRESETS.falsePositive));
+
+        // Random candidate query listeners
+        document.getElementById('btn-random-confirmed').addEventListener('click', () => {
+            fetchAndFillCandidate('http://127.0.0.1:8000/candidato/aleatorio?disposition=confirmed');
+        });
+
+        document.getElementById('btn-random-false').addEventListener('click', () => {
+            fetchAndFillCandidate('http://127.0.0.1:8000/candidato/aleatorio?disposition=false');
+        });
+
+        // Search candidate query listener
+        const doSearch = () => {
+            const query = document.getElementById('txt-search-kepler').value.trim();
+            if (!query) return;
+            fetchAndFillCandidate(`http://127.0.0.1:8000/candidato/${encodeURIComponent(query)}`);
+        };
+
+        document.getElementById('btn-search-kepler').addEventListener('click', doSearch);
+        document.getElementById('txt-search-kepler').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') doSearch();
+        });
+
+        // Submit Handler
+        document.getElementById('formulario-estrella').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const loadingContainer = document.getElementById('loading-container');
+            const errorContainer = document.getElementById('error-container');
+            const resultBox = document.getElementById('resultado-caja');
+            const btnSubmit = document.getElementById('btn-submit');
+
+            // Collect parameters
+            const ntVal = parseInt(document.getElementById('koi_fpflag_nt').value);
+            const ssVal = parseInt(document.getElementById('koi_fpflag_ss').value);
+            const coVal = parseInt(document.getElementById('koi_fpflag_co').value);
+            const sloggVal = parseFloat(document.getElementById('koi_slogg').value);
+            const sradVal = parseFloat(document.getElementById('koi_srad').value);
+            const raVal = parseFloat(document.getElementById('ra').value);
+            const decVal = parseFloat(document.getElementById('dec').value);
+            const kepmagVal = parseFloat(document.getElementById('koi_kepmag').value);
+
+            const requestData = {
+                koi_fpflag_nt: ntVal,
+                koi_fpflag_ss: ssVal,
+                koi_fpflag_co: coVal,
+                koi_slogg: sloggVal,
+                koi_srad: sradVal,
+                ra: raVal,
+                dec: decVal,
+                koi_kepmag: kepmagVal
+            };
+
+            // UI State updates
+            loadingContainer.classList.remove('hidden');
+            errorContainer.classList.add('hidden');
+            resultBox.classList.add('hidden');
+            btnSubmit.disabled = true;
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/predecir', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('El servidor de predicciones devolvio un estado de error.');
+                }
+
+                const json = await response.json();
+                const predictionStr = json.prediccion;
+                const isConfirmed = predictionStr.includes('CONFIRMADO');
+
+                // Clean loading and show result
+                loadingContainer.classList.add('hidden');
+                
+                // Color result card accordingly
+                resultBox.classList.remove('hidden', 'bg-emerald-950/20', 'border-emerald-900/60', 'bg-slate-900/40', 'border-slate-800/80');
+                const lightIndicator = document.getElementById('indicador-luz');
+                lightIndicator.className = 'w-3.5 h-3.5 rounded-full';
+
+                if (isConfirmed) {
+                    resultBox.classList.add('bg-emerald-950/20', 'border-emerald-900/60', 'shadow-[0_4px_30px_rgba(16,185,129,0.05)]');
+                    lightIndicator.classList.add('bg-emerald-500', 'shadow-[0_0_12px_rgba(16,185,129,0.6)]');
+                    document.getElementById('texto-prediccion').className = 'text-xl font-bold uppercase tracking-wide mt-1 text-emerald-400';
+                } else {
+                    resultBox.classList.add('bg-slate-900/40', 'border-slate-800/80', 'shadow-[0_4px_30px_rgba(0,0,0,0.2)]');
+                    lightIndicator.classList.add('bg-slate-600', 'shadow-[0_0_8px_rgba(100,116,139,0.4)]');
+                    document.getElementById('texto-prediccion').className = 'text-xl font-bold uppercase tracking-wide mt-1 text-slate-400';
+                }
+
+                document.getElementById('texto-prediccion').innerText = predictionStr;
+
+                // Fill card metadata grid
+                document.getElementById('res-kepmag').innerText = kepmagVal.toFixed(2) + ' mag';
+                
+                const totalFlags = ntVal + ssVal + coVal;
+                document.getElementById('res-anomalias').innerText = totalFlags > 0 ? 'Anomalias' : 'Firma Limpia';
+                document.getElementById('res-fisicas').innerText = sloggVal.toFixed(2) + ' g / ' + sradVal.toFixed(2) + ' R☉';
+
+            } catch (error) {
+                loadingContainer.classList.add('hidden');
+                errorContainer.classList.remove('hidden');
+                errorContainer.innerText = 'Error de conexion con el servidor analitico. Verifique que la API este ejecutandose.';
+            } finally {
+                btnSubmit.disabled = false;
+            }
+        });
+
+        // Canvas Starfield and Rotating Galaxy Simulation
+        const canvas = document.getElementById('space-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let stars = [];
+        const numStars = 100;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initStars();
+        }
+
+        function initStars() {
+            stars = [];
+            for (let i = 0; i < numStars; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 1.5 + 0.3,
+                    speedX: (Math.random() - 0.5) * 0.05,
+                    speedY: (Math.random() - 0.5) * 0.05,
+                    alpha: Math.random(),
+                    twinkleSpeed: 0.002 + Math.random() * 0.005
+                });
+            }
+        }
+
+        // Soft procedurally rotating galaxies
+        let galaxies = [
+            {
+                xRatio: 0.8,
+                yRatio: 0.25,
+                radius: 130,
+                angle: 0,
+                speed: 0.0003,
+                color: '148, 163, 184' // slate-400
+            },
+            {
+                xRatio: 0.15,
+                yRatio: 0.75,
+                radius: 80,
+                angle: 0,
+                speed: -0.00015,
+                color: '230, 200, 117' // gold
+            }
+        ];
+
+        function drawGalaxy(g) {
+            const x = canvas.width * g.xRatio;
+            const y = canvas.height * g.yRatio;
+
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(g.angle);
+
+            // Core glow
+            let grad = ctx.createRadialGradient(0, 0, 0, 0, 0, g.radius);
+            grad.addColorStop(0, `rgba(${g.color}, 0.09)`);
+            grad.addColorStop(0.3, `rgba(${g.color}, 0.04)`);
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(0, 0, g.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Spiral Dust Particles
+            ctx.fillStyle = `rgba(${g.color}, 0.18)`;
+            for (let j = 0; j < 250; j++) {
+                let theta = j * 0.15;
+                let r = Math.pow(theta, 1.15) * 1.8;
+                if (r > g.radius) break;
+                
+                // Arm 1
+                let x1 = r * Math.cos(theta);
+                let y1 = r * Math.sin(theta);
+                ctx.fillRect(x1, y1, 1.2, 1.2);
+
+                // Arm 2 (symmetrical)
+                let x2 = -x1;
+                let y2 = -y1;
+                ctx.fillRect(x2, y2, 1.2, 1.2);
+            }
+
+            ctx.restore();
+            g.angle += g.speed;
+        }
+
+        function animateSpace() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Render Stars
+            ctx.fillStyle = '#ffffff';
+            for (let i = 0; i < numStars; i++) {
+                let star = stars[i];
+                star.x += star.speedX;
+                star.y += star.speedY;
+
+                // Border Wrap-around
+                if (star.x < 0) star.x = canvas.width;
+                if (star.x > canvas.width) star.x = 0;
+                if (star.y < 0) star.y = canvas.height;
+                if (star.y > canvas.height) star.y = 0;
+
+                // Sinusoidal opacity oscillation
+                star.alpha += star.twinkleSpeed;
+                if (star.alpha > 1 || star.alpha < 0.1) {
+                    star.twinkleSpeed = -star.twinkleSpeed;
+                }
+
+                ctx.globalAlpha = star.alpha;
+                ctx.fillRect(star.x, star.y, star.size, star.size);
+            }
+
+            ctx.globalAlpha = 1.0;
+
+            // Render Galaxies
+            for (let g of galaxies) {
+                drawGalaxy(g);
+            }
+
+            requestAnimationFrame(animateSpace);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        animateSpace();
+    </script>
+</body>
+</html>
